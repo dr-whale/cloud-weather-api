@@ -1,14 +1,15 @@
 from src.yandex import Client, ClientError, InvalidMethodError, BadConfigError, InvalidArgumentError
 from src.lib import CacheManager
 from config import yandex
-import pika, datetime, json
+from datetime import datetime
+import pika, json
 
 def error_decorator(func):
-    def test_wrapper():
+    def test_wrapper(arg):
         code = 500
         message = 'Error'
         try:
-            return func()
+            return func(arg)
         except InvalidArgumentError as exp:
             code = 404
             message = str(exp)
@@ -36,13 +37,14 @@ def client_create():
         weather_client = Client(yandex.BASE_URL, yandex.API_KEY)
     return weather_client
 
-# @error_decorator
+@error_decorator
 def weather_send(date):
     weather = CacheManager().get(date)
     if not weather:
-        full_day = client_create().weather_req(yandex.DATA_URL, yandex.PARAMS)['forecasts'][0]['parts']['day']
-        CacheManager().remember(date, json.dumps(dict(temperature = full_day['temp_avg'], condition = full_day['condition'])))
-        weather = CacheManager().get(date)
+        delta = datetime.strptime(date, "%d.%m.%Y").date() - datetime.today().date()
+        full_day = client_create().weather_req(yandex.DATA_URL, yandex.PARAMS)['forecasts'][delta.days]['parts']['day']
+        weather = json.dumps(dict(temperature = full_day['temp_avg'], condition = full_day['condition']))
+        CacheManager().remember(date, weather)
     channel.queue_declare(queue = 'weather', durable = True)
     channel.basic_publish(exchange = '', routing_key = 'weather', body = weather)
     print('Weather send')
