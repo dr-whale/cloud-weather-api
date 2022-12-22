@@ -1,0 +1,6 @@
+/data_api/__pycache__
+/weather_api/__pycache__
+/weather_api/config/__pycache__
+/weather_api/config/.env
+/weather_api/src/yandex/__pycache__
+/weather_api/src/lib/__pycache__
